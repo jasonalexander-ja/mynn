@@ -2,6 +2,13 @@
 name = "mynn"
 version = "0.1.0"
 edition = "2021"
+authors = ["Jason Alexander <jasonalexander.dev@gmail.com>"]
+description = "Experimental no_std type-safe neural network library. "
+readme = "README.md"
+repository = "https://github.com/jasonalexander-ja/mynn"
+license = "MIT"
+keywords = ["no_std", "machine_learning", "neural_network", "experiemntal", "embedded"]
+categories = ["no-std", "science", "embedded"]
 
 [dependencies]
 rand = "0.8.5"

@@ -74,8 +74,8 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
     /// use mynn::{make_network, activations::SIGMOID};
     /// 
     /// let inputs = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]];
-    /// let targets = [[0.0], [0.0], [0.0], [1.0]]
-    /// let network = make_network!(2, 3, 1);
+    /// let targets = [[0.0], [0.0], [0.0], [1.0]];
+    /// let mut network = make_network!(2, 3, 1);
     /// 
     /// network.train(0.5, inputs, targets, 10_000, &SIGMOID);
     /// 
