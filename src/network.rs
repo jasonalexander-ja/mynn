@@ -57,8 +57,8 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
     pub fn new(next: T) -> ProcessLayer<ROWS, NEURONS, END_S, T> {
         ProcessLayer {
             next,
-            weights: Matrix::zeros(),
-            biases: Matrix::zeros(),
+            weights: Matrix::random(),
+            biases: Matrix::random(),
             data: Matrix::zeros(),
         }
     }

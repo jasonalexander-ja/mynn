@@ -1,4 +1,4 @@
-//#![no_std]
+#![no_std]
 
 pub mod activations;
 pub mod matrix;
