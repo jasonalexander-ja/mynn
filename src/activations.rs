@@ -1,13 +1,14 @@
 #[cfg(not(feature = "f32"))]
 use core::f64::consts::E;
-#[cfg(feature = "f32")]
-use core::f32::consts::E;
 #[cfg(not(feature = "f32"))]
 use libm::pow;
+
 #[cfg(feature = "f32")]
-use libm::powf;
+use core::f32::consts::E;
+// Micromath works better on smaller 8 bit MCUs where we would be using 32 bits  
 #[cfg(feature = "f32")]
-use micromath::F32Ext;
+use micromath::F32Ext; 
+
 use super::Float;
 
 
