@@ -1,5 +1,9 @@
-use rand::{thread_rng, Rng};
+use fastrand::Rng;
 use super::Float;
+use core::fmt;
+
+
+const SEED: u64 = 6_447_991_239_222_745_267;
 
 /// Type that represents a matrix, uses fixed size arrays based on the `ROWS` and `COLS` const parameters. 
 #[derive(Clone)]
@@ -15,13 +19,30 @@ impl<const ROWS: usize, const COLS: usize> Matrix<ROWS, COLS> {
 		}
 	}
 
+	#[cfg(not(feature = "f32"))]
 	pub fn random() -> Matrix<ROWS, COLS> {
-		let mut rng = thread_rng();
+		let mut rng = Rng::with_seed(SEED);
 		let mut data = [[0.0; COLS]; ROWS];
 
 		for row in 0..ROWS {
 			for col in 0..COLS {
-				data[row][col] = rng.gen::<Float>() * 2.0 - 1.0;
+				data[row][col] = rng.f64() * 2.0 - 1.0;
+			}
+		}
+
+		Matrix {
+			data
+		}
+	}
+
+	#[cfg(feature = "f32")]
+	pub fn random() -> Matrix<ROWS, COLS> {
+		let mut rng = Rng::with_seed(SEED);
+		let mut data = [[0.0; COLS]; ROWS];
+
+		for row in 0..ROWS {
+			for col in 0..COLS {
+				data[row][col] = rng.f32() * 2.0 - 1.0;
 			}
 		}
 
@@ -127,5 +148,11 @@ impl<const ROWS: usize, const COLS: usize> Matrix<ROWS, COLS> {
 		Matrix {
 			data
 		}
+	}
+}
+
+impl<const ROWS: usize, const COLS: usize> fmt::Debug for Matrix<ROWS, COLS> {
+	fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+		fmt.debug_list().entries(self.data.iter()).finish()
 	}
 }

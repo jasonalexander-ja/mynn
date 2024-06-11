@@ -8,7 +8,9 @@
 //! 
 //! ## Explaination 
 //! 
-//! This is a small library (currently ~200 lines minus doc comments and helper macros) I initially created during my lunch break when I had attempted to represent the shape of a neural network in the rust type system, the result was I was able to make all the vectors into fixed sized arrays and allow the neural network to be no-std and usable microncontroller and embedded platforms.  
+//! This is a small library (currently ~200 lines minus doc comments and helper macros) I initially created during my lunch break when I had attempted to represent the shape of a neural network in Rust's type system, the result was I was able to make all the vectors into fixed sized arrays and allow the neural network to be no-std and in theory usable on microcontroller and embedded platforms.  
+//! 
+//! See this [example](https://github.com/jasonalexander-ja/mynn-attiny-example) of a pre-trained model approximating an XOR running on an ATtiny85. 
 //! 
 //! ## Installation 
 //! 
@@ -19,26 +21,26 @@
 //! 
 //! Cargo.toml: 
 //! ```text 
-//! mynn = "0.1.0" 
+//! mynn = "0.1.1" 
 //! ``` 
 //! 
 //! To use `f32` in all operations, supply the `f32` flag:
 //! 
 //! ```text
-//! mynn = { version = "0.1.0", features = ["f32"] }
+//! mynn = { version = "0.1.1", features = ["f32"] }
 //! ```
 //! 
 //! ## Example  
 //! 
-//! Simple estimating the output of a XOR gate. 
+//! Short example approximates the output of a XOR gate. 
 //! 
 //! ```rust
 //! use mynn::make_network;
 //! use mynn::activations::SIGMOID;
 //! 
 //! fn main() {
-//!     let inputs: [[f64; 2]; 4] = [[0.0, 0.0],  [0.0, 1.0], [1.0, 0.0],  [1.0, 1.0]];
-//!     let targets: [[f64; 1]; 4] = [[0.0], [1.0], [1.0], [0.0]];
+//!     let inputs = [[0.0, 0.0],  [0.0, 1.0], [1.0, 0.0],  [1.0, 1.0]];
+//!     let targets = [[0.0], [1.0], [1.0], [0.0]];
 //! 
 //! 
 //!     let mut network = make_network!(2, 3, 1);

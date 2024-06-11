@@ -1,11 +1,14 @@
 #[cfg(not(feature = "f32"))]
 use core::f64::consts::E;
-#[cfg(feature = "f32")]
-use core::f32::consts::E;
 #[cfg(not(feature = "f32"))]
 use libm::pow;
+
 #[cfg(feature = "f32")]
-use libm::powf;
+use core::f32::consts::E;
+// Micromath works better on smaller 8 bit MCUs where we would be using 32 bits  
+#[cfg(feature = "f32")]
+use micromath::F32Ext; 
+
 use super::Float;
 
 
@@ -27,6 +30,6 @@ pub const SIGMOID: Activation = Activation {
 /// Sigmoid activation function, used a lot in the examples and tests. 
 #[cfg(feature = "f32")]
 pub const SIGMOID: Activation = Activation {
-    function: &|x| 1.0 / (1.0 + powf(E, -x)),
+    function: &|x| 1.0 / (1.0 + E.powf(-x)),
     derivative: &|x| x * (1.0 - x)
 };

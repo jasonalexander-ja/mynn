@@ -1,12 +1,13 @@
 use super::{activations::Activation, matrix::Matrix};
 use super::Float;
+use core::fmt;
 
 /// Generic type for all layers in a neural network defining standard const parameter and behaviour. 
 /// 
 /// # Type Parameters
 /// * `NEURONS` The number of neurons in that layer. 
 /// * `END_S` The number of neurons in the final layer, used when passing back an array of predictions. 
-pub trait Layer<const NEURONS: usize, const END_S: usize> {
+pub trait Layer<const NEURONS: usize, const END_S: usize>: fmt::Debug {
 
     /// Feeds forward data and returns (I.E. predicts) an array of data based on it's current learned state. 
     /// 
@@ -44,6 +45,16 @@ pub struct ProcessLayer<const ROWS: usize, const NEURONS: usize, const END_S: us
     pub data: Matrix<NEURONS, 1>
 }
 
+impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS, END_S>> fmt::Debug for ProcessLayer<ROWS, NEURONS, END_S, T> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("")
+            .field("\"weights\"", &self.weights)
+            .field("\"biases\"", &self.biases)
+            .field("\"next\"", &self.next)
+            .finish()
+    }
+}
+
 impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS, END_S>> ProcessLayer<ROWS, NEURONS, END_S, T> {
 
     /// Instantiates a new layer, accepts the next layer in the linked list as a parameter. 
@@ -63,7 +74,39 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
         }
     }
 
-    /// Accepts an array of data, feeding it forward down each layer, returning the predicted result based on the current learning state. 
+    /// Instantiates a new layer, accepts the next layer in the linked list as a parameter and also the weights and biases to be used. 
+    /// 
+    /// Useful for instantiating pre-trained networks, will likeley be used in later revisions to easily store-and-recall models.  
+    /// 
+    /// # Example 
+    /// ```
+    /// use mynn::network::{EndLayer, ProcessLayer};
+    /// use mynn::activations::SIGMOID;
+    /// 
+    /// let first_layer_weights = [[-8.086764, -8.086563],[-10.876657, -10.877184],[10.14248, 10.143111]];
+    /// let first_layer_biases = [3.3848374, 4.80076, -15.381532];
+    /// let second_layer_weights = [[-2.4123971, -6.627293, -8.613715]];
+    /// let second_layer_biases = [4.3186426];
+    /// 
+    /// let mut network: ProcessLayer<3, 2, 1, ProcessLayer<1, 3, 1, EndLayer<1>>> = 
+    ///     ProcessLayer::new_with(
+    ///         ProcessLayer::new_with(EndLayer(), second_layer_weights, second_layer_biases), 
+    ///         first_layer_weights, 
+    ///         first_layer_biases
+    ///     );
+    /// 
+    /// network.predict([1.0, 1.0], &SIGMOID);
+    /// ```
+    pub fn new_with(next: T, weights: [[Float; NEURONS]; ROWS], biases: [Float; ROWS]) -> ProcessLayer<ROWS, NEURONS, END_S, T> {
+        ProcessLayer {
+            next,
+            weights: Matrix::from(weights),
+            biases: Matrix::from([biases]).transpose(),
+            data: Matrix::zeros(),
+        }
+    }
+
+    /// Accepts an array of data, feeding it forward down each layer, returning the predicted result based on the current learned state. 
     /// 
     /// # Parameters 
     /// * `data` The data for the prediction to be made upon, must have equal number of values as neurons in the first layer. 
@@ -144,6 +187,12 @@ impl <const END_S: usize> Layer<END_S, END_S> for EndLayer<END_S> {
         let errors = Matrix::from([targets]).transpose().subtract(&parsed);
         let gradients = parsed.map(&act.derivative);
         BackProps(errors, gradients)
+    }
+}
+
+impl <const END_S: usize> fmt::Debug for EndLayer<END_S> {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("null").finish()
     }
 }
 
