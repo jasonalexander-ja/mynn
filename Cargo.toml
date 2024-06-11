@@ -11,8 +11,9 @@ keywords = ["no_std", "machine_learning", "neural_network", "experiemntal", "emb
 categories = ["no-std", "science", "embedded"]
 
 [dependencies]
-rand = "0.8.5"
+# rand = "0.8.5"
 libm = "0.2.8"
+micromath = "2.1.0"
 
 [features]
 f32 = []

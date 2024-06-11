@@ -1,4 +1,4 @@
-use rand::{thread_rng, Rng};
+// use rand::{thread_rng, Rng};
 use super::Float;
 
 /// Type that represents a matrix, uses fixed size arrays based on the `ROWS` and `COLS` const parameters. 
@@ -15,20 +15,20 @@ impl<const ROWS: usize, const COLS: usize> Matrix<ROWS, COLS> {
 		}
 	}
 
-	pub fn random() -> Matrix<ROWS, COLS> {
-		let mut rng = thread_rng();
-		let mut data = [[0.0; COLS]; ROWS];
+	// pub fn random() -> Matrix<ROWS, COLS> {
+	// 	let mut rng = thread_rng();
+	// 	let mut data = [[0.0; COLS]; ROWS];
 
-		for row in 0..ROWS {
-			for col in 0..COLS {
-				data[row][col] = rng.gen::<Float>() * 2.0 - 1.0;
-			}
-		}
+	// 	for row in 0..ROWS {
+	// 		for col in 0..COLS {
+	// 			data[row][col] = rng.gen::<Float>() * 2.0 - 1.0;
+	// 		}
+	// 	}
 
-		Matrix {
-			data
-		}
-	}
+	// 	Matrix {
+	// 		data
+	// 	}
+	// }
 
 	/// Will multiply with another matrix with number of rows equal to the number of rows as to this matrix's cols. 
 	pub fn multiply<const OTHER_COLS: usize>(&self, other: &Matrix<COLS, OTHER_COLS>) -> Matrix<ROWS, OTHER_COLS> {

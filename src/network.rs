@@ -1,7 +1,7 @@
 use super::{activations::Activation, matrix::Matrix};
 use super::Float;
 
-/// Generic type for all layers in a neural network defining standard const parameter and behaviour. 
+/// Generic type for all layers in a neural network defining standard const parameter and behavior. 
 /// 
 /// # Type Parameters
 /// * `NEURONS` The number of neurons in that layer. 
@@ -15,13 +15,13 @@ pub trait Layer<const NEURONS: usize, const END_S: usize> {
     /// * `act` The Activation function to be used. 
     fn feed_forward<'a>(&mut self, feed: Matrix<NEURONS, 1>, act: &Activation<'a>) -> [Float; END_S];
 
-    /// Back propagates (I.E. makes corrections or "learns") based on the previous outputs and the expected outputs. 
-    /// 
-    /// # Parameters 
-    /// * `l_rate` The learning rate, is multiplied with the calculated difference gradient to allow for smaller/greater changes per learning revision. 
-    /// * `outputs` The outputs from the previous prediction. 
-    /// * `targets` The actual targeted value for the previous prediction. 
-    /// * `act` The activation function. 
+    // Back propagates (I.E. makes corrections or "learns") based on the previous outputs and the expected outputs. 
+    // 
+    // # Parameters 
+    // * `l_rate` The learning rate, is multiplied with the calculated difference gradient to allow for smaller/greater changes per learning revision. 
+    // * `outputs` The outputs from the previous prediction. 
+    // * `targets` The actual targeted value for the previous prediction. 
+    // * `act` The activation function. 
     fn back_propagate<'a>(&mut self, l_rate: Float, outputs: [Float; END_S], targets: [Float; END_S], act: &Activation<'a>) -> BackProps<NEURONS>;
 }
 
@@ -32,7 +32,7 @@ pub trait Layer<const NEURONS: usize, const END_S: usize> {
 /// 
 /// # Type Parameters
 /// * `ROWS` The number of rows in the weights, biases, and number of neurons that must be in the next layer. 
-/// * `NEURONS` The number of neurons (number of columbs in the weights matrix) in this layer. 
+/// * `NEURONS` The number of neurons (number of columns in the weights matrix) in this layer. 
 /// * `END_S` The number of neurons in the final layer, used when passing back an array of predictions. 
 /// * `T` The type of the next layer, must implement [Layer]. 
 pub struct ProcessLayer<const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS, END_S>> {
@@ -57,8 +57,8 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
     pub fn new(next: T) -> ProcessLayer<ROWS, NEURONS, END_S, T> {
         ProcessLayer {
             next,
-            weights: Matrix::random(),
-            biases: Matrix::random(),
+            weights: Matrix::zeros(),
+            biases: Matrix::zeros(),
             data: Matrix::zeros(),
         }
     }
@@ -91,7 +91,7 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
     /// * `l_rate` The learning rate, is multiplied with the calculated difference gradient to allow for smaller/greater changes per learning revision. 
     /// * `inputs` Array of possible inputs, each index in this array must correspond with the same index in the `targets`. 
     /// * `targets` Array of targets, each index in this array must correspond with the same index in the `inputs`. 
-    /// * `epochs` Number of epochs (feeding forward/preedicting and then back propagating/learning).
+    /// * `epochs` Number of epochs (feeding forward/predicting and then back propagating/learning).
     /// * `act` The activation function. 
     pub fn train<'a, const DATA_S: usize>(&mut self, l_rate: Float, inputs: [[Float; NEURONS]; DATA_S], targets: [[Float; END_S]; DATA_S], epochs: usize, act: &Activation<'a>) {
         for _ in 1..=epochs {

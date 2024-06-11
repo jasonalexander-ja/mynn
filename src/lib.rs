@@ -6,9 +6,9 @@
 //! 
 //! An hobbyist no-std neural network library. 
 //! 
-//! ## Explaination 
+//! ## Explanation 
 //! 
-//! This is a small library (currently ~200 lines minus doc comments and helper macros) I initially created during my lunch break when I had attempted to represent the shape of a neural network in the rust type system, the result was I was able to make all the vectors into fixed sized arrays and allow the neural network to be no-std and usable microncontroller and embedded platforms.  
+//! This is a small library (currently ~200 lines minus doc comments and helper macros) I initially created during my lunch break when I had attempted to represent the shape of a neural network in the rust type system, the result was I was able to make all the vectors into fixed sized arrays and allow the neural network to be no-std and usable microcontroller and embedded platforms.  
 //! 
 //! ## Installation 
 //! 

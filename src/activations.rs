@@ -6,6 +6,8 @@ use core::f32::consts::E;
 use libm::pow;
 #[cfg(feature = "f32")]
 use libm::powf;
+#[cfg(feature = "f32")]
+use micromath::F32Ext;
 use super::Float;
 
 
@@ -27,6 +29,6 @@ pub const SIGMOID: Activation = Activation {
 /// Sigmoid activation function, used a lot in the examples and tests. 
 #[cfg(feature = "f32")]
 pub const SIGMOID: Activation = Activation {
-    function: &|x| 1.0 / (1.0 + powf(E, -x)),
+    function: &|x| 1.0 / (1.0 + E.powf(-x)),
     derivative: &|x| x * (1.0 - x)
 };
