@@ -2,12 +2,24 @@ use super::{activations::Activation, matrix::Matrix};
 use super::Float;
 use core::fmt;
 
+/// A helper type used for setting each layer in the network to a fixed type, allowing for iteration
+/// over recursion. 
+pub struct NormalizedLayer<const SIZE: usize> {
+    pub weights: Matrix<SIZE, SIZE>,
+    pub biases: Matrix<SIZE, 1>,
+    /// The data that was last passed in during a feed forward, used to make corrections during back propagation. 
+    pub data: Matrix<SIZE, 1>
+}
+
 /// Generic type for all layers in a neural network defining standard const parameter and behavior. 
 /// 
 /// # Type Parameters
 /// * `NEURONS` The number of neurons in that layer. 
 /// * `END_S` The number of neurons in the final layer, used when passing back an array of predictions. 
-pub trait Layer<const NEURONS: usize, const END_S: usize>: fmt::Debug {
+pub trait Layer<
+    const NEURONS: usize, 
+    const END_S: usize
+>: fmt::Debug {
 
     /// Feeds forward data and returns (I.E. predicts) an array of data based on it's current learned state. 
     /// 
@@ -36,7 +48,12 @@ pub trait Layer<const NEURONS: usize, const END_S: usize>: fmt::Debug {
 /// * `NEURONS` The number of neurons (number of columns in the weights matrix) in this layer. 
 /// * `END_S` The number of neurons in the final layer, used when passing back an array of predictions. 
 /// * `T` The type of the next layer, must implement [Layer]. 
-pub struct ProcessLayer<const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS, END_S>> {
+pub struct ProcessLayer<
+    const ROWS: usize, 
+    const NEURONS: usize, 
+    const END_S: usize, 
+    T: Layer<ROWS, END_S>
+> {
     /// The next layer. 
     pub next: T,
     pub weights: Matrix<ROWS, NEURONS>,
@@ -45,7 +62,12 @@ pub struct ProcessLayer<const ROWS: usize, const NEURONS: usize, const END_S: us
     pub data: Matrix<NEURONS, 1>
 }
 
-impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS, END_S>> fmt::Debug for ProcessLayer<ROWS, NEURONS, END_S, T> {
+impl<
+    const ROWS: usize, 
+    const NEURONS: usize, 
+    const END_S: usize, 
+    T: Layer<ROWS, END_S>
+> fmt::Debug for ProcessLayer<ROWS, NEURONS, END_S, T> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("")
             .field("\"weights\"", &self.weights)
@@ -55,7 +77,12 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
     }
 }
 
-impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS, END_S>> ProcessLayer<ROWS, NEURONS, END_S, T> {
+impl <
+    const ROWS: usize, 
+    const NEURONS: usize, 
+    const END_S: usize, 
+    T: Layer<ROWS, END_S>
+> ProcessLayer<ROWS, NEURONS, END_S, T> {
 
     /// Instantiates a new layer, accepts the next layer in the linked list as a parameter. 
     /// 
@@ -147,7 +174,12 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
 
 }
 
-impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS, END_S>> Layer<NEURONS, END_S> for ProcessLayer<ROWS, NEURONS, END_S, T> {
+impl<
+    const ROWS: usize, 
+    const NEURONS: usize, 
+    const END_S: usize, 
+    T: Layer<ROWS, END_S>
+> Layer<NEURONS, END_S> for ProcessLayer<ROWS, NEURONS, END_S, T> {
     fn feed_forward<'a>(&mut self, feed: Matrix<NEURONS, 1>, act: &Activation<'a>) -> [Float; END_S] {
         self.data = feed;
         let result = self.weights.multiply(&self.data)
