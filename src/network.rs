@@ -11,14 +11,28 @@ pub struct NormalizedLayer<const SIZE: usize> {
     pub data: Matrix<SIZE, 1>
 }
 
+impl<const SIZE: usize> NormalizedLayer<SIZE> {
+    pub fn new() -> Self {
+        NormalizedLayer {
+            weights: Matrix::zeros(),
+            biases: Matrix::zeros(),
+            data: Matrix::zeros(),
+        }
+    }
+}
+
+
 /// Generic type for all layers in a neural network defining standard const parameter and behavior. 
 /// 
 /// # Type Parameters
 /// * `NEURONS` The number of neurons in that layer. 
 /// * `END_S` The number of neurons in the final layer, used when passing back an array of predictions. 
 pub trait Layer<
+    const INDEX: usize, 
     const NEURONS: usize, 
-    const END_S: usize
+    const END_S: usize,
+    const MAX: usize, 
+    const CHECK: usize = {MAX - NEURONS}
 >: fmt::Debug {
 
     /// Feeds forward data and returns (I.E. predicts) an array of data based on it's current learned state. 
@@ -36,6 +50,47 @@ pub trait Layer<
     // * `targets` The actual targeted value for the previous prediction. 
     // * `act` The activation function. 
     fn back_propagate<'a>(&mut self, l_rate: Float, outputs: [Float; END_S], targets: [Float; END_S], act: &Activation<'a>) -> BackProps<NEURONS>;
+
+
+
+    /// Accepts an array of data, feeding it forward down each layer, returning the predicted result based on the current learned state. 
+    /// 
+    /// # Parameters 
+    /// * `data` The data for the prediction to be made upon, must have equal number of values as neurons in the first layer. 
+    /// * `act` The activation function to be used. 
+    /// 
+    /// # Example 
+    /// ```
+    /// use mynn::{make_network, activations::SIGMOID};
+    /// 
+    /// let inputs = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]];
+    /// let targets = [[0.0], [0.0], [0.0], [1.0]];
+    /// let mut network = make_network!(2, 3, 1);
+    /// 
+    /// network.train(0.5, inputs, targets, 10_000, &SIGMOID);
+    /// 
+    /// println!("1 and 1: {:?}", network.predict([1.0, 1.0], &SIGMOID));
+    /// ```
+    fn predict<'a>(&mut self, data: [Float; NEURONS], act: &Activation<'a>) -> [Float; END_S] {
+        self.feed_forward(Matrix::from([data]).transpose(), act)
+    }
+
+    /// Trains a neural network list, accepts 2 arrays of equal length with the data and expected results. 
+    /// 
+    /// # Parameters 
+    /// * `l_rate` The learning rate, is multiplied with the calculated difference gradient to allow for smaller/greater changes per learning revision. 
+    /// * `inputs` Array of possible inputs, each index in this array must correspond with the same index in the `targets`. 
+    /// * `targets` Array of targets, each index in this array must correspond with the same index in the `inputs`. 
+    /// * `epochs` Number of epochs (feeding forward/predicting and then back propagating/learning).
+    /// * `act` The activation function. 
+    fn train<'a, const DATA_S: usize>(&mut self, l_rate: Float, inputs: [[Float; NEURONS]; DATA_S], targets: [[Float; END_S]; DATA_S], epochs: usize, act: &Activation<'a>) {
+        for _ in 1..=epochs {
+            for i in 0..DATA_S {
+                let outputs = self.feed_forward(Matrix::from([inputs[i]]).transpose(), act);
+                self.back_propagate(l_rate, outputs, targets[i].clone(), act);
+            }
+        }
+    }
 }
 
 
@@ -51,8 +106,10 @@ pub trait Layer<
 pub struct ProcessLayer<
     const ROWS: usize, 
     const NEURONS: usize, 
+    const INDEX: usize, 
     const END_S: usize, 
-    T: Layer<ROWS, END_S>
+    const MAX: usize,
+    T: Layer<{INDEX - 1}, ROWS, END_S, MAX, {MAX - ROWS}>
 > {
     /// The next layer. 
     pub next: T,
@@ -65,9 +122,11 @@ pub struct ProcessLayer<
 impl<
     const ROWS: usize, 
     const NEURONS: usize, 
+    const INDEX: usize, 
     const END_S: usize, 
-    T: Layer<ROWS, END_S>
-> fmt::Debug for ProcessLayer<ROWS, NEURONS, END_S, T> {
+    const MAX: usize,
+    T: Layer<{INDEX - 1}, ROWS, END_S, MAX, {MAX - ROWS}>
+> fmt::Debug for ProcessLayer<ROWS, NEURONS, INDEX, END_S, MAX, T> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("")
             .field("\"weights\"", &self.weights)
@@ -77,12 +136,44 @@ impl<
     }
 }
 
+impl<
+    const ROWS: usize, 
+    const NEURONS: usize, 
+    const INDEX: usize, 
+    const END_S: usize, 
+    const MAX: usize,
+    T: Layer<{INDEX - 1}, ROWS, END_S, MAX, {MAX - ROWS}>
+> Layer<INDEX, NEURONS, END_S, MAX, {MAX - NEURONS}> for ProcessLayer<ROWS, NEURONS, INDEX, END_S, MAX, T> {
+    fn feed_forward<'a>(&mut self, feed: Matrix<NEURONS, 1>, act: &Activation<'a>) -> [Float; END_S] {
+        self.data = feed;
+        let result = self.weights.multiply(&self.data)
+            .add(&self.biases)
+            .map(act.function);
+        self.next.feed_forward(result, act)
+    }
+
+    fn back_propagate<'a>(&mut self, l_rate: Float, outputs: [Float; END_S], targets: [Float; END_S], act: &Activation<'a>) -> BackProps<NEURONS> {
+        let BackProps(errors, gradients) = self.next.back_propagate(l_rate, outputs, targets, act);
+        let gradients = gradients.dot_multiply(&errors).map(&|x| x * l_rate);
+
+        self.weights = self.weights.add(&gradients.multiply(&self.data.transpose()));
+        self.biases = self.biases.add(&gradients);
+
+        let errors = self.weights.transpose().multiply(&errors);
+        let gradients = self.data.map(&act.derivative);
+
+        BackProps(errors, gradients)
+    }
+}
+
 impl <
     const ROWS: usize, 
     const NEURONS: usize, 
+    const INDEX: usize, 
     const END_S: usize, 
-    T: Layer<ROWS, END_S>
-> ProcessLayer<ROWS, NEURONS, END_S, T> {
+    const MAX: usize,
+    T: Layer<{INDEX - 1}, ROWS, END_S, MAX, {MAX - ROWS}>
+> ProcessLayer<ROWS, NEURONS, INDEX, END_S, MAX, T> {
 
     /// Instantiates a new layer, accepts the next layer in the linked list as a parameter. 
     /// 
@@ -90,9 +181,9 @@ impl <
     /// ```
     /// use mynn::network::{ProcessLayer, EndLayer};
     /// 
-    /// let network: ProcessLayer::<3, 2, 1, ProcessLayer<1, 3, 1, EndLayer<1>>> = ProcessLayer::new(ProcessLayer::new(EndLayer()));
+    /// let network: ProcessLayer::<3, 2, 2, 1, 3, ProcessLayer<1, 3, 1, 1, 3, EndLayer<1, 3>>> = ProcessLayer::new(ProcessLayer::new(EndLayer()));
     /// ```
-    pub fn new(next: T) -> ProcessLayer<ROWS, NEURONS, END_S, T> {
+    pub fn new(next: T) -> Self {
         ProcessLayer {
             next,
             weights: Matrix::zeros(),
@@ -124,81 +215,13 @@ impl <
     /// 
     /// network.predict([1.0, 1.0], &SIGMOID);
     /// ```
-    pub fn new_with(next: T, weights: [[Float; NEURONS]; ROWS], biases: [Float; ROWS]) -> ProcessLayer<ROWS, NEURONS, END_S, T> {
+    pub fn new_with(next: T, weights: [[Float; NEURONS]; ROWS], biases: [Float; ROWS]) -> Self {
         ProcessLayer {
             next,
             weights: Matrix::from(weights),
             biases: Matrix::from([biases]).transpose(),
             data: Matrix::zeros(),
         }
-    }
-
-    /// Accepts an array of data, feeding it forward down each layer, returning the predicted result based on the current learned state. 
-    /// 
-    /// # Parameters 
-    /// * `data` The data for the prediction to be made upon, must have equal number of values as neurons in the first layer. 
-    /// * `act` The activation function to be used. 
-    /// 
-    /// # Example 
-    /// ```
-    /// use mynn::{make_network, activations::SIGMOID};
-    /// 
-    /// let inputs = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]];
-    /// let targets = [[0.0], [0.0], [0.0], [1.0]];
-    /// let mut network = make_network!(2, 3, 1);
-    /// 
-    /// network.train(0.5, inputs, targets, 10_000, &SIGMOID);
-    /// 
-    /// println!("1 and 1: {:?}", network.predict([1.0, 1.0], &SIGMOID));
-    /// ```
-    pub fn predict<'a>(&mut self, data: [Float; NEURONS], act: &Activation<'a>) -> [Float; END_S] {
-        self.feed_forward(Matrix::from([data]).transpose(), act)
-    }
-
-    /// Trains a neural network list, accepts 2 arrays of equal length with the data and expected results. 
-    /// 
-    /// # Parameters 
-    /// * `l_rate` The learning rate, is multiplied with the calculated difference gradient to allow for smaller/greater changes per learning revision. 
-    /// * `inputs` Array of possible inputs, each index in this array must correspond with the same index in the `targets`. 
-    /// * `targets` Array of targets, each index in this array must correspond with the same index in the `inputs`. 
-    /// * `epochs` Number of epochs (feeding forward/predicting and then back propagating/learning).
-    /// * `act` The activation function. 
-    pub fn train<'a, const DATA_S: usize>(&mut self, l_rate: Float, inputs: [[Float; NEURONS]; DATA_S], targets: [[Float; END_S]; DATA_S], epochs: usize, act: &Activation<'a>) {
-        for _ in 1..=epochs {
-            for i in 0..DATA_S {
-                let outputs = self.feed_forward(Matrix::from([inputs[i]]).transpose(), act);
-                self.back_propagate(l_rate, outputs, targets[i].clone(), act);
-            }
-        }
-    }
-
-}
-
-impl<
-    const ROWS: usize, 
-    const NEURONS: usize, 
-    const END_S: usize, 
-    T: Layer<ROWS, END_S>
-> Layer<NEURONS, END_S> for ProcessLayer<ROWS, NEURONS, END_S, T> {
-    fn feed_forward<'a>(&mut self, feed: Matrix<NEURONS, 1>, act: &Activation<'a>) -> [Float; END_S] {
-        self.data = feed;
-        let result = self.weights.multiply(&self.data)
-            .add(&self.biases)
-            .map(act.function);
-        self.next.feed_forward(result, act)
-    }
-
-    fn back_propagate<'a>(&mut self, l_rate: Float, outputs: [Float; END_S], targets: [Float; END_S], act: &Activation<'a>) -> BackProps<NEURONS> {
-        let BackProps(errors, gradients) = self.next.back_propagate(l_rate, outputs, targets, act);
-        let gradients = gradients.dot_multiply(&errors).map(&|x| x * l_rate);
-
-        self.weights = self.weights.add(&gradients.multiply(&self.data.transpose()));
-        self.biases = self.biases.add(&gradients);
-
-        let errors = self.weights.transpose().multiply(&errors);
-        let gradients = self.data.map(&act.derivative);
-
-        BackProps(errors, gradients)
     }
 }
 
@@ -207,9 +230,9 @@ impl<
 /// 
 /// # Type Parameters
 /// * `END_S` Number of neurons in the end layer. 
-pub struct EndLayer<const END_S: usize>();
+pub struct EndLayer<const END_S: usize, const MAX: usize>();
 
-impl <const END_S: usize> Layer<END_S, END_S> for EndLayer<END_S> {
+impl <const END_S: usize, const MAX: usize> Layer<0, END_S, END_S, MAX, {MAX - END_S}> for EndLayer<END_S, MAX> {
     fn feed_forward<'a>(&mut self, feed: Matrix<END_S, 1>, _act: &Activation<'a>) -> [Float; END_S] {
         feed.transpose().data[0]
     }
@@ -222,7 +245,7 @@ impl <const END_S: usize> Layer<END_S, END_S> for EndLayer<END_S> {
     }
 }
 
-impl <const END_S: usize> fmt::Debug for EndLayer<END_S> {
+impl <const END_S: usize, const MAX: usize> fmt::Debug for EndLayer<END_S, MAX> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("null").finish()
     }
