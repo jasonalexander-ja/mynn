@@ -156,3 +156,89 @@ impl<const ROWS: usize, const COLS: usize> fmt::Debug for Matrix<ROWS, COLS> {
 		fmt.debug_list().entries(self.data.iter()).finish()
 	}
 }
+
+
+/// Type that represents a matrix, uses fixed size arrays based on the `ROWS` and `COLS` const parameters. 
+#[derive(Clone)]
+pub struct NormalizedMatrix<const ROWS: usize, const COLS: usize> {
+	pub data: [[Float; COLS]; ROWS],
+	pub cols: usize,
+	pub rows: usize,
+}
+
+impl<const ROWS: usize, const COLS: usize> NormalizedMatrix<ROWS, COLS> {
+	/// Initializes a matrix with all zeros. 
+	pub fn zeros(cols: usize, rows: usize) -> Self {
+		NormalizedMatrix {
+			data: [[0.0; COLS]; ROWS],
+			rows,
+			cols
+		}
+	}
+
+	/// Will multiply with another matrix with number of rows equal to the number of rows as to this matrix's cols. 
+	pub fn multiply<const OTHER_COLS: usize>(&mut self, other: &NormalizedMatrix<COLS, OTHER_COLS>) {
+
+		for i in 0..self.rows {
+			for j in 0..other.cols {
+				let mut sum = 0.0;
+				for k in 0..self.cols {
+					sum += self.data[i][k] * other.data[k][j];
+				}
+				self.data[i][j] = sum;
+			}
+		}
+		self.cols = other.cols
+	}
+
+	/// Will add all the values to an equally sized matrix. 
+	pub fn add(&mut self, other: &NormalizedMatrix<ROWS, COLS>) {
+		for row in 0..self.rows {
+			for col in 0..self.cols {
+				self.data[row][col] = self.data[row][col] + other.data[row][col];
+			}
+		}
+	}
+
+	/// Will multiply all the values to an equally sized matrix. 
+	pub fn dot_multiply(&mut self, other: &NormalizedMatrix<ROWS, COLS>) {
+		for row in 0..self.rows {
+			for col in 0..self.cols {
+				self.data[row][col] = self.data[row][col] * other.data[row][col];
+			}
+		}
+	}
+
+	/// Will subtract all the values to an equally sized matrix. 
+	pub fn subtract(&mut self, other: &NormalizedMatrix<ROWS, COLS>){
+		for row in 0..self.rows {
+			for col in 0..self.cols {
+				self.data[row][col] = self.data[row][col] - other.data[row][col];
+			}
+		}
+	}
+
+	/// Maps all the internal values with a given closure. 
+	pub fn map(&mut self, function: &dyn Fn(Float) -> Float) {
+		for row in 0..ROWS {
+			for col in 0..COLS {
+				self.data[row][col] = function(self.data[row][col]);
+			}
+		}
+	}
+
+	/// Swaps the rows and the columns. 
+	pub fn transpose(&self) -> NormalizedMatrix<COLS, ROWS> {
+		let mut data = [[0.0; ROWS]; COLS];
+		for row in 0..ROWS {
+			for col in 0..COLS {
+				data[col][row] = self.data[row][col];
+			}
+		}
+		NormalizedMatrix {
+			data,
+			rows: self.cols,
+			cols: self.rows
+		}
+	}
+}

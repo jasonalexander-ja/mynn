@@ -1,3 +1,5 @@
+use crate::matrix::NormalizedMatrix;
+
 use super::{activations::Activation, matrix::Matrix};
 use super::Float;
 use core::fmt;
@@ -5,20 +7,10 @@ use core::fmt;
 /// A helper type used for setting each layer in the network to a fixed type, allowing for iteration
 /// over recursion. 
 pub struct NormalizedLayer<const SIZE: usize> {
-    pub weights: Matrix<SIZE, SIZE>,
-    pub biases: Matrix<SIZE, 1>,
+    pub weights: NormalizedMatrix<SIZE, SIZE>,
+    pub biases: NormalizedMatrix<SIZE, 1>,
     /// The data that was last passed in during a feed forward, used to make corrections during back propagation. 
-    pub data: Matrix<SIZE, 1>
-}
-
-impl<const SIZE: usize> NormalizedLayer<SIZE> {
-    pub fn new() -> Self {
-        NormalizedLayer {
-            weights: Matrix::zeros(),
-            biases: Matrix::zeros(),
-            data: Matrix::zeros(),
-        }
-    }
+    pub data: NormalizedMatrix<SIZE, 1>
 }
 
 
@@ -91,6 +83,9 @@ pub trait Layer<
             }
         }
     }
+
+    fn to_normalized(&self, index: usize, t: &mut NormalizedLayer<MAX>);
+    fn from_normalized(&mut self, index: usize, t: &NormalizedLayer<MAX>);
 }
 
 
@@ -163,6 +158,35 @@ impl<
         let gradients = self.data.map(&act.derivative);
 
         BackProps(errors, gradients)
+    }
+
+    #[inline(always)]
+    fn to_normalized(&self, index: usize, t: &mut NormalizedLayer<MAX>) {
+        if INDEX == index {
+            for row in 0..ROWS {
+                for col in 0..NEURONS {
+                    t.weights.data[row][col] = self.weights.data[row][col];
+                }
+                t.biases.data[row][1] = self.biases.data[row][1];
+            }
+            return;
+        }
+        self.next.to_normalized(index, t)
+    }
+
+    #[inline(always)]
+    fn from_normalized(&mut self, index: usize, t: &NormalizedLayer<MAX>) {
+        if INDEX == index {
+            for row in 0..ROWS {
+                for col in 0..NEURONS {
+                    self.weights.data[row][col] = t.weights.data[row][col];
+                    self.data.data[col][1] = t.data.data[col][1];
+                }
+                self.biases.data[row][1] = t.biases.data[row][1];
+            }
+            return;
+        }
+        self.next.from_normalized(index, t)
     }
 }
 
@@ -243,6 +267,12 @@ impl <const END_S: usize, const MAX: usize> Layer<0, END_S, END_S, MAX, {MAX - E
         let gradients = parsed.map(&act.derivative);
         BackProps(errors, gradients)
     }
+
+    #[inline(always)]
+    fn to_normalized(&self, _index: usize, _t: &mut NormalizedLayer<MAX>) { }
+
+    #[inline(always)]
+    fn from_normalized(&mut self, _index: usize, _t: &NormalizedLayer<MAX>) { }
 }
 
 impl <const END_S: usize, const MAX: usize> fmt::Debug for EndLayer<END_S, MAX> {
