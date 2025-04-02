@@ -145,19 +145,18 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
         }
     }
 
-}
 
-impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS, END_S>> Layer<NEURONS, END_S> for ProcessLayer<ROWS, NEURONS, END_S, T> {
-    fn feed_forward<'a>(&mut self, feed: Matrix<NEURONS, 1>, act: &Activation<'a>) -> [Float; END_S] {
+    #[inline]
+    fn calc_feed_forward<'a>(&mut self, feed: Matrix<NEURONS, 1>, act: &Activation<'a>) -> Matrix<ROWS, 1> {
         self.data = feed;
-        let result = self.weights.multiply(&self.data)
+        self.weights.multiply(&self.data)
             .add(&self.biases)
-            .map(act.function);
-        self.next.feed_forward(result, act)
+            .map(act.function)
     }
 
-    fn back_propagate<'a>(&mut self, l_rate: Float, outputs: [Float; END_S], targets: [Float; END_S], act: &Activation<'a>) -> BackProps<NEURONS> {
-        let BackProps(errors, gradients) = self.next.back_propagate(l_rate, outputs, targets, act);
+    #[inline]
+    fn calc_back_propagate<'a>(&mut self, back_props: BackProps<ROWS>, l_rate: Float, act: &Activation<'a>) -> BackProps<NEURONS> {
+        let BackProps(errors, gradients) = back_props;
         let gradients = gradients.dot_multiply(&errors).map(&|x| x * l_rate);
 
         self.weights = self.weights.add(&gradients.multiply(&self.data.transpose()));
@@ -170,6 +169,36 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
     }
 }
 
+impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS, END_S>> Layer<NEURONS, END_S> for ProcessLayer<ROWS, NEURONS, END_S, T> {
+    #[cfg(not(feature = "recurse-opt"))]
+    fn feed_forward<'a>(&mut self, feed: Matrix<NEURONS, 1>, act: &Activation<'a>) -> [Float; END_S] {
+        let result = self.calc_feed_forward(feed, act);
+        self.next.feed_forward(result, act)
+    }
+
+    #[cfg(not(feature = "recurse-opt"))]
+    fn back_propagate<'a>(&mut self, l_rate: Float, outputs: [Float; END_S], targets: [Float; END_S], act: &Activation<'a>) -> BackProps<NEURONS> {
+        
+        let back_props = self.next.back_propagate(l_rate, outputs, targets, act);
+        self.calc_back_propagate(back_props, l_rate, act)
+    }
+
+    #[cfg(feature = "recurse-opt")]
+    #[inline]
+    fn feed_forward<'a>(&mut self, feed: Matrix<NEURONS, 1>, act: &Activation<'a>) -> [Float; END_S] {
+        let result = self.calc_feed_forward(feed, act);
+        self.next.feed_forward(result, act)
+    }
+
+    #[cfg(feature = "recurse-opt")]
+    #[inline]
+    fn back_propagate<'a>(&mut self, l_rate: Float, outputs: [Float; END_S], targets: [Float; END_S], act: &Activation<'a>) -> BackProps<NEURONS> {
+        
+        let back_props = self.next.back_propagate(l_rate, outputs, targets, act);
+        self.calc_back_propagate(back_props, l_rate, act)
+    }
+}
+
 
 /// The end layer, this terminates the neural network linked list, just accepts the number of neurons in the final layer. 
 /// 
@@ -178,10 +207,12 @@ impl <const ROWS: usize, const NEURONS: usize, const END_S: usize, T: Layer<ROWS
 pub struct EndLayer<const END_S: usize>();
 
 impl <const END_S: usize> Layer<END_S, END_S> for EndLayer<END_S> {
+    #[inline]
     fn feed_forward<'a>(&mut self, feed: Matrix<END_S, 1>, _act: &Activation<'a>) -> [Float; END_S] {
         feed.transpose().data[0]
     }
 
+    #[inline]
     fn back_propagate<'a>(&mut self, _l_rate: Float, outputs: [Float; END_S], targets: [Float; END_S], act: &Activation<'a>) -> BackProps<END_S> {
         let parsed = Matrix::from([outputs]).transpose();
         let errors = Matrix::from([targets]).transpose().subtract(&parsed);
