@@ -22,7 +22,7 @@ checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
 
 [[package]]
 name = "mynn"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "fastrand",
  "libm",

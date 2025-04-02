@@ -21,14 +21,21 @@
 //! 
 //! Cargo.toml: 
 //! ```text 
-//! mynn = "0.1.1" 
+//! mynn = "0.1.2" 
 //! ``` 
 //! 
 //! To use `f32` in all operations, supply the `f32` flag:
 //! 
 //! ```text
-//! mynn = { version = "0.1.1", features = ["f32"] }
+//! mynn = { version = "0.1.2", features = ["f32"] }
 //! ```
+//! 
+//! To remove recursion, use `recurse-opt`:
+//! ```text
+//! mynn = { version = "0.1.1", features = ["recurse-opt"] }
+//! ```
+//! 
+//! This will cause all the recursive method calls on each layer to be inlined, on larger models this may increase the size of the generated code, tradeoffs need to be considered.
 //! 
 //! ## Example  
 //! 
